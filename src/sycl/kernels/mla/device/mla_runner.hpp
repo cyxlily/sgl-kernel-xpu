@@ -196,10 +196,10 @@ class MLA {
   static cutlass::Status run(Params& params, sycl::queue& queue = c10::xpu::getCurrentXPUStream().queue()) {
     if constexpr (!Kernel::is_split_kv) {
       // Non-split: launch main kernel only
-      launch<Kernel, 128>(params.fmla_params);
+      launch<Kernel, 256>(params.fmla_params);
     } else {
       // Split-KV: launch split attention kernel + reduction kernel
-      launch<Kernel, 128>(params.fmla_params);
+      launch<Kernel, 256>(params.fmla_params);
       launch<ReductionKernel, 128>(params.reduction_params);
     }
 
