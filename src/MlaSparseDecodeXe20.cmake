@@ -1,14 +1,14 @@
 # Generate Sparse MLA decode kernel instantiation files for DeepSeek V4.
 # Each ELEM_TAG is compiled as a separate library to parallelize compilation.
 
-set(MLA_SPARSE_DECODE_ELEM_TAGS half bf16)
-set(MLA_SPARSE_DECODE_ELEM_SYCL_TYPES "sycl::half" "sycl::ext::oneapi::bfloat16")
+# Single authoritative dtype list. The filename/symbol-safe ELEM_TAG is what's
+# enumerated here; the C++ query type (ELEM_SYCL_TYPE) is derived from it inside the
+# loop, so there is no second list to keep index-aligned. Add "half" here to also build
+# the half variants.
+set(MLA_SPARSE_DECODE_ELEM_TAGS bf16)
 
 set(MLA_SPARSE_DECODE_TEMPLATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sycl/mla_sparse_decode_kernel.cpp.in")
-
-list(LENGTH MLA_SPARSE_DECODE_ELEM_TAGS _num_elems)
-math(EXPR _num_elems "${_num_elems} - 1")
 
 set(MLA_SPARSE_DECODE_2STAGE_TEMPLATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sycl/mla_sparse_decode_2stage_kernel.cpp.in")
@@ -24,9 +24,15 @@ set(MLA_SPARSE_DECODE_2STAGE_D_QK 512)
 set(MLA_SPARSE_DECODE_2STAGE_B_H 8 16 32 64)
 set(MLA_SPARSE_DECODE_2STAGE_HAS_ATTN_SINK 0 1)
 
-foreach(_idx RANGE ${_num_elems})
-    list(GET MLA_SPARSE_DECODE_ELEM_TAGS ${_idx} ELEM_TAG)
-    list(GET MLA_SPARSE_DECODE_ELEM_SYCL_TYPES ${_idx} ELEM_SYCL_TYPE)
+foreach(ELEM_TAG ${MLA_SPARSE_DECODE_ELEM_TAGS})
+    # Derive the C++ query type from the tag (no second list to keep in sync).
+    if(ELEM_TAG STREQUAL "half")
+        set(ELEM_SYCL_TYPE "sycl::half")
+    elseif(ELEM_TAG STREQUAL "bf16")
+        set(ELEM_SYCL_TYPE "sycl::ext::oneapi::bfloat16")
+    else()
+        message(FATAL_ERROR "Unknown MLA_SPARSE_DECODE_ELEM_TAG '${ELEM_TAG}' (expected half or bf16)")
+    endif()
 
     # Fused (single-pass) variant -- optimization track, opt-in via USE_MLA_SPARSE_FUSED
     # (default OFF). The 2-stage variant below is always built (shipping default).
