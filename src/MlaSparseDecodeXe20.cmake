@@ -28,10 +28,14 @@ foreach(_idx RANGE ${_num_elems})
     list(GET MLA_SPARSE_DECODE_ELEM_TAGS ${_idx} ELEM_TAG)
     list(GET MLA_SPARSE_DECODE_ELEM_SYCL_TYPES ${_idx} ELEM_SYCL_TYPE)
 
-    set(GENERATED_FILE
-        "${CMAKE_CURRENT_BINARY_DIR}/sycl/mla_sparse_decode_kernel_${ELEM_TAG}_128.cpp")
-    configure_file(${MLA_SPARSE_DECODE_TEMPLATE} ${GENERATED_FILE} @ONLY)
-    list(APPEND device_cpp_xe20 ${GENERATED_FILE})
+    # Fused (single-pass) variant -- optimization track, opt-in via USE_MLA_SPARSE_FUSED
+    # (default OFF). The 2-stage variant below is always built (shipping default).
+    if(USE_MLA_SPARSE_FUSED)
+        set(GENERATED_FILE
+            "${CMAKE_CURRENT_BINARY_DIR}/sycl/mla_sparse_decode_kernel_${ELEM_TAG}_128.cpp")
+        configure_file(${MLA_SPARSE_DECODE_TEMPLATE} ${GENERATED_FILE} @ONLY)
+        list(APPEND device_cpp_xe20 ${GENERATED_FILE})
+    endif()
 
     # Two-stage: one TU per (ELEM_TAG, D_QK, B_H, HAS_ATTN_SINK).
     foreach(D_QK ${MLA_SPARSE_DECODE_2STAGE_D_QK})
