@@ -42,6 +42,12 @@ limitations under the License.
 
 using fptr_t = int64_t;
 
+// The kernels below are defined in the per-kernel SYCL shared libraries and
+// called from common_ops (torch_extension_sycl.cc). The SYCL libraries are
+// built with -fvisibility=hidden, so their public entry points must be given
+// default visibility to remain exported and dynamically linkable.
+#pragma GCC visibility push(default)
+
 /*
  * From csrc/allreduce
  */
@@ -466,6 +472,87 @@ void inkling_save_intermediate_conv_windows(
     at::Tensor& intermediate_out,
     int64_t batch_size,
     int64_t draft_token_num);
+/*
+ * Inkling fused attention prologue family.
+ */
+std::tuple<at::Tensor, at::Tensor, at::Tensor> inkling_attn_prologue_verify(
+    const at::Tensor& qkvr,
+    const at::Tensor& k_cache,
+    const at::Tensor& v_cache,
+    const at::Tensor& cache_indices,
+    const at::Tensor& cache_mask,
+    const at::Tensor& k_weight,
+    const at::Tensor& v_weight,
+    at::Tensor& k_inter,
+    at::Tensor& v_inter,
+    const at::Tensor& q_gamma,
+    const at::Tensor& k_gamma,
+    double eps,
+    const at::Tensor& loc,
+    at::Tensor& k_buf,
+    at::Tensor& v_buf,
+    int64_t q_off,
+    int64_t k_off,
+    int64_t v_off,
+    int64_t dq,
+    int64_t dkv,
+    int64_t draft_token_num,
+    bool silu_activation,
+    bool use_residual,
+    bool do_store);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> inkling_attn_prologue_decode(
+    const at::Tensor& qkvr,
+    at::Tensor& k_cache,
+    at::Tensor& v_cache,
+    const at::Tensor& cache_indices,
+    const at::Tensor& cache_mask,
+    const at::Tensor& k_weight,
+    const at::Tensor& v_weight,
+    const std::optional<at::Tensor>& track_mask,
+    const std::optional<at::Tensor>& track_indices,
+    const at::Tensor& q_gamma,
+    const at::Tensor& k_gamma,
+    double eps,
+    const at::Tensor& loc,
+    at::Tensor& k_buf,
+    at::Tensor& v_buf,
+    int64_t q_off,
+    int64_t k_off,
+    int64_t v_off,
+    int64_t dq,
+    int64_t dkv,
+    bool silu_activation,
+    bool use_residual,
+    bool do_store);
+std::tuple<at::Tensor, at::Tensor, at::Tensor> inkling_attn_prologue_extend(
+    const at::Tensor& qkvr,
+    at::Tensor& k_cache,
+    at::Tensor& v_cache,
+    const at::Tensor& cache_indices,
+    const at::Tensor& cache_mask,
+    const at::Tensor& has_initial_state,
+    const at::Tensor& cu,
+    const at::Tensor& si,
+    const at::Tensor& k_weight,
+    const at::Tensor& v_weight,
+    const std::optional<at::Tensor>& track_rows,
+    const std::optional<at::Tensor>& track_mask,
+    const std::optional<at::Tensor>& track_dst,
+    const at::Tensor& q_gamma,
+    const at::Tensor& k_gamma,
+    double eps,
+    const at::Tensor& loc,
+    at::Tensor& k_buf,
+    at::Tensor& v_buf,
+    int64_t q_off,
+    int64_t k_off,
+    int64_t v_off,
+    int64_t dq,
+    int64_t dkv,
+    bool silu_activation,
+    bool use_residual,
+    bool do_store,
+    bool do_cache_update);
 
 /*
  * From csrc/gemm
@@ -1155,3 +1242,5 @@ void causal_conv1d_update(
     const std::optional<at::Tensor>& cache_seqlens_,
     const std::optional<at::Tensor>& conv_state_indices_,
     int64_t pad_slot_id);
+
+#pragma GCC visibility pop
