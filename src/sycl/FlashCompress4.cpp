@@ -274,6 +274,7 @@ struct FlashCompress4WriteKernel {
     buffer_t* kv_dst = kv_buffer_ + static_cast<int64_t>(plan.write_loc) * elem_size_;
 
     c4_write_token_strided<buffer_t, input_t>(kv_dst, kv_src, split_offset, lane_id, head_dim);
+  }
 
   buffer_t* kv_buffer_;
   const input_t* kv_input_;
