@@ -256,8 +256,9 @@ struct FlashCompress4WriteKernel {
     const uint32_t global_wid = gid * 4U + (lid / 16U);
     const uint32_t pid = global_wid / num_split_;
     const uint32_t split_id = global_wid % num_split_;
-    // Contiguous-tile mapping for prefill write: one warp copies one contiguous 4*kTileDim region.
-    const int64_t split_offset = static_cast<int64_t>(split_id) * (kTileDim * 4);
+    // Split along head_dim columns (kTileDim=64) and copy all 4 rows with stride=head_dim.
+    const int64_t head_dim = elem_size_ / 4;
+    const int64_t split_offset = static_cast<int64_t>(split_id) * kTileDim;
     const uint32_t lane_id = lid % 16U;
 
     if (pid >= num_write_) {
@@ -272,8 +273,7 @@ struct FlashCompress4WriteKernel {
     const input_t* kv_src = kv_input_ + static_cast<int64_t>(plan.ragged_id) * elem_size_;
     buffer_t* kv_dst = kv_buffer_ + static_cast<int64_t>(plan.write_loc) * elem_size_;
 
-    c4_write_token_strided<buffer_t, input_t>(kv_dst, kv_src, split_offset, lane_id, kTileDim);
-  }
+    c4_write_token_strided<buffer_t, input_t>(kv_dst, kv_src, split_offset, lane_id, head_dim);
 
   buffer_t* kv_buffer_;
   const input_t* kv_input_;
